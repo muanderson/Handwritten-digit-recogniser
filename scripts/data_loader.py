@@ -29,9 +29,8 @@ class MNISTDataset(Dataset):
 def transforms(is_training=False):
     if is_training:
         return A.Compose([
-            A.Rotate(limit=10, p=0.5),
-            A.HorizontalFlip(p=0.5),
-            A.Normalize(),
+            A.ShiftScaleRotate(shift_limit=0.06, scale_limit=0.1, rotate_limit=15, p=0.6),
+            A.Normalize(mean=(0.1307,), std=(0.3081,)), # Use MNIST's specific mean and std
             ToTensorV2(),
         ])
     else:

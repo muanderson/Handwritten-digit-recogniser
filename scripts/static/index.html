@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Draw a Digit</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #ddd;
+            font-family: sans-serif;
+            text-align: center;
+            padding-top: 20px;
+        }
+        canvas {
+            background-color: black;
+            border: 2px solid #888;
+            cursor: crosshair;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        /* Style for the new label selectors */
+        .labels {
+            margin: 15px 0;
+            display: inline-block;
+        }
+        .labels label {
+            margin: 0 5px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Draw a digit (0–9)</h2>
+<canvas id="canvas" width="280" height="280"></canvas><br>
+
+<div class="labels">
+  <strong>Select Label:</strong>
+  <label><input type="radio" name="digit" value="0" checked> 0</label>
+  <label><input type="radio" name="digit" value="1"> 1</label>
+  <label><input type="radio" name="digit" value="2"> 2</label>
+  <label><input type="radio" name="digit" value="3"> 3</label>
+  <label><input type="radio" name="digit" value="4"> 4</label>
+  <label><input type="radio" name="digit" value="5"> 5</label>
+  <label><input type="radio" name="digit" value="6"> 6</label>
+  <label><input type="radio" name="digit" value="7"> 7</label>
+  <label><input type="radio" name="digit" value="8"> 8</label>
+  <label><input type="radio" name="digit" value="9"> 9</label>
+</div>
+<br>
+
+<button onclick="clearCanvas()">Clear</button>
+<button onclick="submit()">Save & Predict</button>
+<p id="result"></p>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Fill background black
+ctx.fillStyle = 'black';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+let drawing = false;
+let lastX = 0;
+let lastY = 0;
+
+canvas.addEventListener('mousedown', (e) => {
+    drawing = true;
+    lastX = e.offsetX;
+    lastY = e.offsetY;
+});
+
+canvas.addEventListener('mouseup', () => drawing = false);
+canvas.addEventListener('mouseleave', () => drawing = false);
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!drawing) return;
+
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 20; // Increased line width for better recognition
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+
+    lastX = e.offsetX;
+    lastY = e.offsetY;
+});
+
+function clearCanvas() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('result').innerText = '';
+}
+
+function submit() {
+    canvas.toBlob(blob => {
+        // Get the value of the selected radio button
+        const selectedLabel = document.querySelector('input[name="digit"]:checked').value;
+
+        const formData = new FormData();
+        formData.append('file', blob, 'digit.png');
+        formData.append('label', selectedLabel); // Add the label to the form data
+
+        fetch('/predict', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            let resultText = 'Prediction: ' + data.prediction;
+            if (data.saved_path) {
+                // Confirm that the file was saved
+                resultText += ` | Saved to: ${data.saved_path}`;
+                console.log(`Image saved to: ${data.saved_path}`);
+            }
+            document.getElementById('result').innerText = resultText;
+        })
+        .catch(err => {
+            document.getElementById('result').innerText = 'Error: ' + err.message;
+        });
+    }, 'image/png');
+}
+</script>
+
+</body>
+</html>

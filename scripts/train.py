@@ -77,7 +77,7 @@ def main():
         val_loader = DataLoader(val_dataset,batch_size=config['batch_size'], shuffle=False, num_workers=2, pin_memory=torch.cuda.is_available())  
 
         # Create model
-        model = CNN()b 
+        model = CNN()
         model.to(config['device'])
 
         train_acc, train_f1, val_acc, val_f1 = train_epoch(model, train_loader, val_loader, config, config['device'])
