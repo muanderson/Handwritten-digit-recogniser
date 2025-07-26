@@ -4,6 +4,18 @@ import torch
 import torch.nn as nn
 import numpy as np
 import io
+import matplotlib.pyplot as plt
+import os
+import time
+from model import CNN
+
+# Load model
+model = CNN()
+# IMPORTANT: Make sure this path is correct for your system
+model.load_state_dict(torch.load(r'C:\Users\Matthew\Documents\PhD\MNIST\models\best_model_fold_2.pt'))
+model.to('cuda:0')
+model.eval()
+
 from model import CNN 
 
 # --- Setup Model for Prediction ---
