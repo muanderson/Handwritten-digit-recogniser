@@ -4,110 +4,82 @@ import torch
 import torch.nn as nn
 import numpy as np
 import io
-import matplotlib.pyplot as plt
-import os
-import time # <-- Import the time module
+from model import CNN 
 
-class CNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.relu = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(2, 2)
-        self.pool2 = nn.MaxPool2d(2, 2)
-        self.flatten = nn.Flatten()
-        self.linear = nn.Linear(64 * 5 * 5, 128)
-        self.linearout = nn.Linear(128, 10)
+# --- Setup Model for Prediction ---
+print("Loading fine-tuned model...")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model = CNN().to(device)
 
-    def forward(self, image):
-        x = self.conv1(image)
-        x = self.relu(x)
-        x = self.pool1(x)
-        x = self.conv2(x)
-        x = self.relu(x)
-        x = self.pool2(x)
-        x = self.flatten(x)
-        x = self.linear(x)
-        x = self.relu(x)
-        x = self.linearout(x)
-        return x
+# IMPORTANT: Update this path to your best fine-tuned model
+model_path = r'C:\Users\Matthew\Documents\PhD\MNIST\models\fine_tuned_best_model_fold_5.pt'
+model.load_state_dict(torch.load(model_path, map_location=device))
+model.eval() # Set model to evaluation mode
+print(f"Model loaded successfully from {model_path} and set to evaluation mode.")
 
-# Load model
-model = CNN()
-# IMPORTANT: Make sure this path is correct for your system
-model.load_state_dict(torch.load(r'C:\Users\Matthew\Documents\PhD\MNIST\models\best_model_fold_2.pt'))
-model.to('cuda:0')
-model.eval()
-
+# --- Setup Flask App ---
 app = Flask(__name__, static_folder='static')
-
-# --- NEW: Define the path for your new dataset ---
-DATASET_PATH = 'my_drawings'
-os.makedirs(DATASET_PATH, exist_ok=True)
-
 
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
 
-
 @app.route('/predict', methods=['POST'])
 def predict():
-    # --- MODIFICATION: Get the label from the form data ---
-    label = request.form.get('label')
-    if label is None:
-        return jsonify({'error': 'No label provided'}), 400
-
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
     image_file = request.files['file']
+    if image_file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    # --- Image Preprocessing ---
+    # This logic should match the preprocessing used during training/validation
     image = Image.open(io.BytesIO(image_file.read())).convert('L')
-    image = np.array(image)
+    
+    # Invert colors if necessary - MNIST is white on black.
+    # If your canvas is black on white, you might need ImageOps.invert(image)
+    
+    image_np = np.array(image)
 
-    # Threshold to binary: white digit on black background
-    image = (image > 50).astype(np.uint8) * 255
-
-    coords = np.argwhere(image)
+    # Find bounding box to crop the digit
+    coords = np.argwhere(image_np > 50) # Find non-black pixels
     if coords.size == 0:
         return jsonify({'prediction': 'No digit found'})
 
     y0, x0 = coords.min(axis=0)
     y1, x1 = coords.max(axis=0) + 1
-    cropped = image[y0:y1, x0:x1]
+    cropped = image_np[y0:y1, x0:x1]
 
-    # Resize to 20x20 (retaining anti-aliasing is better for training)
-    cropped_img = Image.fromarray(cropped).resize((20, 20), Image.LANCZOS)
+    # Resize to 20x20 while maintaining aspect ratio, then pad to 28x28
+    cropped_img = Image.fromarray(cropped)
+    cropped_img.thumbnail((20, 20), Image.LANCZOS)
     
-    # Pad to 28x28 with black background
-    padded_img = ImageOps.expand(cropped_img, border=4, fill=0)
+    # Create a new 28x28 black image and paste the digit in the center
+    padded_img = Image.new('L', (28, 28), 0)
+    paste_x = (28 - cropped_img.width) // 2
+    paste_y = (28 - cropped_img.height) // 2
+    padded_img.paste(cropped_img, (paste_x, paste_y))
 
-    # --- MODIFICATION: Save the image for your dataset ---
-    # 1. Create a subdirectory for the label (e.g., 'my_drawings/7')
-    label_dir = os.path.join(DATASET_PATH, label)
-    os.makedirs(label_dir, exist_ok=True)
-    
-    # 2. Create a unique filename using a timestamp
-    timestamp = int(time.time() * 1000)
-    filename = f"{timestamp}.png"
-    save_path = os.path.join(label_dir, filename)
-
-    # 3. Save the processed image
-    padded_img.save(save_path)
-
-
-    # --- Prediction logic remains the same ---
-    padded = np.array(padded_img).astype(np.float32) / 255.0
+    # --- Prediction Logic ---
+    # Normalize the image tensor using MNIST's mean and std
+    padded_np = np.array(padded_img).astype(np.float32) / 255.0
     mean, std = 0.1307, 0.3081
-    normed = (padded - mean) / std
+    normed = (padded_np - mean) / std
 
-    tensor = torch.tensor(normed).unsqueeze(0).unsqueeze(0).to('cuda:0')
+    tensor = torch.tensor(normed).unsqueeze(0).unsqueeze(0).to(device)
 
     with torch.no_grad():
         output = model(tensor)
-        pred = output.argmax(dim=1).item()
+        probabilities = torch.nn.functional.softmax(output, dim=1)
+        confidence, pred = torch.max(probabilities, 1)
+        
+    prediction_result = {
+        'prediction': str(pred.item()),
+        'confidence': f"{confidence.item():.4f}"
+    }
 
-    # Return both the prediction and the path where the image was saved
-    return jsonify({'prediction': str(pred), 'saved_path': save_path})
-
+    return jsonify(prediction_result)
 
 if __name__ == '__main__':
     app.run(debug=True)
