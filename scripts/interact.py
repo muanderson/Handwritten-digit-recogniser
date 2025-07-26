@@ -16,8 +16,6 @@ model.load_state_dict(torch.load(r'C:\Users\Matthew\Documents\PhD\MNIST\models\b
 model.to('cuda:0')
 model.eval()
 
-from model import CNN 
-
 # --- Setup Model for Prediction ---
 print("Loading fine-tuned model...")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -46,12 +44,7 @@ def predict():
         return jsonify({'error': 'No selected file'}), 400
 
     # --- Image Preprocessing ---
-    # This logic should match the preprocessing used during training/validation
     image = Image.open(io.BytesIO(image_file.read())).convert('L')
-    
-    # Invert colors if necessary - MNIST is white on black.
-    # If your canvas is black on white, you might need ImageOps.invert(image)
-    
     image_np = np.array(image)
 
     # Find bounding box to crop the digit
