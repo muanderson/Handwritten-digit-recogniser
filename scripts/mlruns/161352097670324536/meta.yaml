@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/Matthew/Documents/PhD/MNIST/MNIST/scripts/mlruns/161352097670324536
+creation_time: 1753546393424
+experiment_id: '161352097670324536'
+last_update_time: 1753546393424
+lifecycle_stage: active
+name: MNIST Base Model Training

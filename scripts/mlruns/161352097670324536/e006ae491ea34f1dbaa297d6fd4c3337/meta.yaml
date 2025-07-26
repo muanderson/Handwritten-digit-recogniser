@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Matthew/Documents/PhD/MNIST/MNIST/scripts/mlruns/161352097670324536/e006ae491ea34f1dbaa297d6fd4c3337/artifacts
+end_time: 1753552193365
+entry_point_name: ''
+experiment_id: '161352097670324536'
+lifecycle_stage: active
+run_id: e006ae491ea34f1dbaa297d6fd4c3337
+run_name: Fold_5
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1753551835211
+status: 3
+tags: []
+user_id: Matthew

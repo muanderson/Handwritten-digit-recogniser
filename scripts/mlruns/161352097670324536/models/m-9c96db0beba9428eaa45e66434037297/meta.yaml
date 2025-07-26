@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/Matthew/Documents/PhD/MNIST/MNIST/scripts/mlruns/161352097670324536/models/m-9c96db0beba9428eaa45e66434037297/artifacts
+creation_timestamp: 1753552189514
+experiment_id: '161352097670324536'
+last_updated_timestamp: 1753552193245
+model_id: m-9c96db0beba9428eaa45e66434037297
+model_type: null
+name: model
+source_run_id: e006ae491ea34f1dbaa297d6fd4c3337
+status: 2
+status_message: null
