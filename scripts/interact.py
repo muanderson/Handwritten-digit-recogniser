@@ -20,11 +20,9 @@ model.eval()
 print("Loading fine-tuned model...")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = CNN().to(device)
-
-# IMPORTANT: Update this path to your best fine-tuned model
 model_path = r'C:\Users\Matthew\Documents\PhD\MNIST\models\fine_tuned_best_model_fold_5.pt'
 model.load_state_dict(torch.load(model_path, map_location=device))
-model.eval() # Set model to evaluation mode
+model.eval() 
 print(f"Model loaded successfully from {model_path} and set to evaluation mode.")
 
 # --- Setup Flask App ---
