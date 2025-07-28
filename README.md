@@ -1,4 +1,4 @@
- Handwritten Digit Recognizer with a Full MLOps Workflow
+# Handwritten Digit Recognizer with a Full MLOps Workflow
 
 This project demonstrates a complete end-to-end workflow for building, training, fine-tuning, and deploying a deep learning model to recognize handwritten digits. The application is built using PyTorch and containerized with Docker, with all experiments tracked using MLflow.
 
@@ -10,7 +10,7 @@ You can try out the live application, deployed on Hugging Face Spaces, at the li
 
 **[➡️ Live Demo on Hugging Face Spaces](https://huggingface.co/spaces/muanderson/Digit_prediction)**
 
-![Demo GIF of the application working](demo.mp4)
+![Demo GIF of the application working](demo.gif)
 
 ---
 
