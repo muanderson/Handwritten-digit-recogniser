@@ -1,6 +1,6 @@
-# Handwritten Digit Recognizer with a Full MLOps Workflow
+# Handwritten Digit Recogniser with a Full MLOps Workflow
 
-This project demonstrates a complete end-to-end workflow for building, training, fine-tuning, and deploying a deep learning model to recognize handwritten digits. The application is built using PyTorch and containerized with Docker, with all experiments tracked using MLflow.
+This project demonstrates a complete end-to-end workflow for building, training, fine-tuning, and deploying a deep learning model to recognise handwritten digits. The application is built using PyTorch and containerised with Docker, with all experiments tracked using MLflow.
 
 ---
 
@@ -29,7 +29,7 @@ You can try out the live application, deployed on Hugging Face Spaces, at the li
 ## 📂 Project Structure
 
 ```
-/Digit_Recognizer_MLOps
+/Digit_Recogniser
 |
 ├─── data/
 │    └── train/              # Original MNIST training data
@@ -71,7 +71,7 @@ First, a CNN was trained on the standard MNIST dataset. To ensure the model was 
 
 ### 2. Fine-Tuning on Custom Data
 
-After training a general-purpose digit recognizer, a small dataset of 300 custom drawings (30 for each digit) was created. The best base model was then loaded, and its early convolutional layers were **frozen**. Only the final, fully-connected classification layers were retrained on this new dataset. This transfer learning approach allows the model to adapt to a specific user's handwriting style without needing a large dataset. This fine-tuning process was also tracked as a separate experiment in MLflow.
+After training a general-purpose digit recogniser, a small dataset of 300 custom drawings (30 for each digit) was created. The best base model was then loaded, and its early convolutional layers were **frozen**. Only the final, fully-connected classification layers were retrained on this new dataset. This transfer learning approach allows the model to adapt to a specific user's handwriting style without needing a large dataset. This fine-tuning process was also tracked as a separate experiment in MLflow.
 
 ---
 
@@ -80,7 +80,7 @@ After training a general-purpose digit recognizer, a small dataset of 300 custom
 * **Python**
 * **PyTorch:** For building and training the neural network.
 * **MLflow:** For experiment tracking and model management.
-* **Docker:** For containerizing the application.
+* **Docker:** For containerising the application.
 * **Flask:** For serving the web application and prediction endpoint.
 * **Gunicorn:** As the production web server.
 * **Hugging Face Spaces:** For hosting the final application.
