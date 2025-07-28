@@ -11,7 +11,6 @@ You can try out the live application, deployed on Hugging Face Spaces, at the li
 **[➡️ Live Demo on Hugging Face Spaces](https://huggingface.co/spaces/muanderson/Digit_prediction)**
 
 ![Demo GIF of the application working](demo.mp4)
-*Note: You will need to replace the link above with a link to your hosted GIF.*
 
 ---
 
