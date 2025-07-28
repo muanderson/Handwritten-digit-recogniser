@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/Matthew/Documents/PhD/MNIST/MNIST/scripts/mlruns/521042712159618318/models/m-e2492cebcb21463fac18e5e5c96f8c22/artifacts
+creation_timestamp: 1753712725822
+experiment_id: '521042712159618318'
+last_updated_timestamp: 1753712730147
+model_id: m-e2492cebcb21463fac18e5e5c96f8c22
+model_type: null
+name: fine_tuned_model_fold_5
+source_run_id: c3eabb6045ab414fbe1d1edd7b4b9156
+status: 2
+status_message: null

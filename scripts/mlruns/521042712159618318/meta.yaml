@@ -1,0 +1,6 @@
+artifact_location: file:///C:/Users/Matthew/Documents/PhD/MNIST/MNIST/scripts/mlruns/521042712159618318
+creation_time: 1753712666623
+experiment_id: '521042712159618318'
+last_update_time: 1753712666623
+lifecycle_stage: active
+name: MNIST Fine-Tuning on Custom Drawings

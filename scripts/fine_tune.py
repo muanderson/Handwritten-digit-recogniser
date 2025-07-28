@@ -4,11 +4,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.model_selection import KFold
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from model import CNN
 from data_loader import MNISTDataset, transforms
+import mlflow
+import mlflow.pytorch
 
 def seed_everything(seed=42):
     """
@@ -23,22 +26,25 @@ def seed_everything(seed=42):
 
 def main():
     """
-    Main function to run the fine-tuning process with K-Fold cross-validation.
+    Main function to run the fine-tuning process with K-Fold cross-validation and MLflow tracking.
     """
     seed_everything()
 
     # --- Configuration for Fine-Tuning ---
     config = {
         'data_dir': r'C:\Users\Matthew\Documents\PhD\MNIST\MNIST\my_drawings',
-        'model_path': r'C:\Users\Matthew\Documents\PhD\MNIST\models\best_model_fold_2.pt',
-        'output_dir': r'C:\Users\Matthew\Documents\PhD\MNIST\models',
-        'learning_rate': 1e-4,  
-        'epochs': 25,          
+        'model_path': r'models\best_model_fold_2.pt', 
+        'output_dir': r'models', 
+        'learning_rate': 1e-4,
+        'epochs': 30,
         'batch_size': 16,
-        'n_splits': 5,         
+        'n_splits': 5,
         'device': torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
     }
     print(f"Using device: {config['device']}")
+
+    # --- MLflow Setup ---
+    mlflow.set_experiment("MNIST Fine-Tuning on Custom Drawings")
 
     # Create output directory if it doesn't exist
     os.makedirs(config['output_dir'], exist_ok=True)
@@ -63,66 +69,85 @@ def main():
     fold_results = []
 
     for fold, (train_idx, val_idx) in enumerate(kf.split(image_paths, labels)):
-        print(f"\n===== Starting Fold {fold+1}/{config['n_splits']} =====")
         
-        # --- Create Datasets and Dataloaders for the current fold ---
-        train_images, train_labels = image_paths[train_idx], labels[train_idx]
-        val_images, val_labels = image_paths[val_idx], labels[val_idx]
-
-        train_dataset = MNISTDataset(train_images, train_labels, transform=transforms(is_training=True))
-        val_dataset = MNISTDataset(val_images, val_labels, transform=transforms(is_training=False))
-
-        train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
-
-        # --- Load Model, Freeze Layers, and Setup Optimizer for each fold ---
-        model = CNN().to(config['device'])
-        model.load_state_dict(torch.load(config['model_path']))
-        
-        # Freeze convolutional layers
-        for name, param in model.named_parameters():
-            if 'conv' in name:
-                param.requires_grad = False
-        
-        # Optimizer will only update the weights of unfrozen layers
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config['learning_rate'])
-        criterion = nn.CrossEntropyLoss()
-        
-        best_val_acc = 0.0
-
-        # --- Training & Validation Loop for the current fold ---
-        for epoch in range(config['epochs']):
-            model.train()
-            for images, epoch_labels in tqdm(train_loader, desc=f"Fold {fold+1} Epoch {epoch+1} Train"):
-                images, epoch_labels = images.to(config['device']), epoch_labels.to(config['device']).long()
-                
-                optimizer.zero_grad()
-                outputs = model(images)
-                loss = criterion(outputs, epoch_labels)
-                loss.backward()
-                optimizer.step()
-
-            # Validation
-            model.eval()
-            all_preds, all_labels = [], []
-            with torch.no_grad():
-                for images, epoch_labels in val_loader:
-                    images, epoch_labels = images.to(config['device']), epoch_labels.to(config['device']).long()
-                    outputs = model(images)
-                    preds = outputs.argmax(dim=1).cpu().numpy()
-                    all_preds.extend(preds)
-                    all_labels.extend(epoch_labels.cpu().numpy())
+        # --- MLflow Run for each Fold ---
+        with mlflow.start_run(run_name=f"Fine-Tune_Fold_{fold+1}"):
+            print(f"\n===== Starting Fine-Tune Fold {fold+1}/{config['n_splits']} =====")
             
-            val_acc = accuracy_score(all_labels, all_preds)
-            print(f"Fold {fold+1} Epoch {epoch+1} - Val Accuracy: {val_acc:.4f}")
+            # 1. Log parameters
+            mlflow.log_params(config)
+            mlflow.log_param("fold_number", fold + 1)
+            
+            # --- Dataloaders ---
+            train_images, train_labels = image_paths[train_idx], labels[train_idx]
+            val_images, val_labels = image_paths[val_idx], labels[val_idx]
+            train_dataset = MNISTDataset(train_images, train_labels, transform=transforms(is_training=True))
+            val_dataset = MNISTDataset(val_images, val_labels, transform=transforms(is_training=False))
+            train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
+            val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False)
 
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
-                save_path = os.path.join(config['output_dir'], f'fine_tuned_best_model_fold_{fold+1}.pt')
-                torch.save(model.state_dict(), save_path)
-                print(f"Best validation accuracy improved to {best_val_acc:.4f}. Saving model to {save_path}")
-        
-        fold_results.append(best_val_acc)
+            # --- Model Setup ---
+            model = CNN().to(config['device'])
+            model.load_state_dict(torch.load(config['model_path']))
+            
+            # Freeze convolutional layers
+            for name, param in model.named_parameters():
+                if 'conv' in name:
+                    param.requires_grad = False
+            
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config['learning_rate'])
+            criterion = nn.CrossEntropyLoss()
+            scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.2, patience=3, verbose=True)
+            
+            best_val_acc = 0.0
+
+            # --- Training & Validation Loop ---
+            for epoch in range(config['epochs']):
+                model.train()
+                total_train_loss = 0
+                for images, epoch_labels in tqdm(train_loader, desc=f"Fold {fold+1} Epoch {epoch+1} Train"):
+                    images, epoch_labels = images.to(config['device']), epoch_labels.to(config['device']).long()
+                    optimizer.zero_grad()
+                    outputs = model(images)
+                    loss = criterion(outputs, epoch_labels)
+                    loss.backward()
+                    optimizer.step()
+                    total_train_loss += loss.item()
+
+                # Validation
+                model.eval()
+                all_preds, all_labels = [], []
+                with torch.no_grad():
+                    for images, epoch_labels in val_loader:
+                        images, epoch_labels = images.to(config['device']), epoch_labels.to(config['device']).long()
+                        outputs = model(images)
+                        preds = outputs.argmax(dim=1).cpu().numpy()
+                        all_preds.extend(preds)
+                        all_labels.extend(epoch_labels.cpu().numpy())
+                
+                val_acc = accuracy_score(all_labels, all_preds)
+                val_f1 = f1_score(all_labels, all_preds, average='weighted')
+                
+                scheduler.step(val_acc)
+
+                # 2. Log per-epoch metrics
+                mlflow.log_metric("train_loss", total_train_loss / len(train_loader), step=epoch)
+                mlflow.log_metric("validation_accuracy", val_acc, step=epoch)
+                mlflow.log_metric("validation_f1", val_f1, step=epoch)
+
+                print(f"Epoch {epoch+1} - Val Acc: {val_acc:.4f}, Val F1: {val_f1:.4f}")
+
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    save_path = os.path.join(config['output_dir'], f'fine_tuned_best_model_fold_{fold+1}.pt')
+                    torch.save(model.state_dict(), save_path)
+                    print(f"Best validation accuracy improved to {best_val_acc:.4f}. Saving model.")
+            
+            # 3. Log final best accuracy and the model artifact for the fold
+            mlflow.log_metric("best_validation_accuracy", best_val_acc)
+            mlflow.pytorch.log_model(model, f"fine_tuned_model_fold_{fold+1}", registered_model_name="fine-tuned-cnn")
+            
+            fold_results.append(best_val_acc)
 
     # --- Final Results ---
     if fold_results:

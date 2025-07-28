@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Matthew/Documents/PhD/MNIST/MNIST/scripts/mlruns/521042712159618318/c3eabb6045ab414fbe1d1edd7b4b9156/artifacts
+end_time: 1753712730313
+entry_point_name: ''
+experiment_id: '521042712159618318'
+lifecycle_stage: active
+run_id: c3eabb6045ab414fbe1d1edd7b4b9156
+run_name: Fine-Tune_Fold_5
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1753712718370
+status: 3
+tags: []
+user_id: Matthew
