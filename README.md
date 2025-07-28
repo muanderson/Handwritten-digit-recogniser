@@ -67,11 +67,11 @@ The project was executed in two main stages to build a robust and personalised m
 
 ### 1. Base Model Training
 
-First, a CNN was trained on the standard MNIST dataset. To ensure the model was robust and to select the best possible version, a 5-fold cross-validation strategy was used. Each fold was logged as a separate run in **MLflow**. We tracked key parameters (learning rate, epochs, etc.) and metrics (accuracy, F1-score) to compare the folds. The model from the best-performing fold (`best_model_fold_2.pt`) was saved and selected as the base model for the next stage.
+First, a CNN was trained on the standard MNIST dataset. To ensure the model was robust and to select the best possible version, a 5-fold cross-validation strategy was used. Each fold was logged as a separate run in **MLflow**. I tracked key parameters (learning rate, epochs, etc.) and metrics (accuracy, F1-score) to compare the folds. The model from the best-performing fold (`best_model_fold_2.pt`) was saved and selected as the base model for the next stage.
 
 ### 2. Fine-Tuning on Custom Data
 
-After training a general-purpose digit recogniser, a small dataset of 300 custom drawings (30 for each digit) was created. The best base model was then loaded, and its early convolutional layers were **frozen**. Only the final, fully-connected classification layers were retrained on this new dataset. This transfer learning approach allows the model to adapt to a specific user's handwriting style without needing a large dataset. This fine-tuning process was also tracked as a separate experiment in MLflow.
+After training a general-purpose digit recogniser, a small dataset of 300 custom drawings (30 for each digit) was created. The best base model was then loaded, and its early convolutional layers were **frozen**. Only the final, fully-connected classification layers were retrained on this new dataset. This transfer learning approach was used to adapt the model to the characteristics of the inference module (e.g. drawing width). This fine-tuning process was also tracked as a separate experiment in MLflow.
 
 ---
 
